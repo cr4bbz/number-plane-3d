@@ -231,8 +231,31 @@ function clearGroup(group) {
 function rebuildEigenDirections(kappa) {
   clearGroup(eigenGroup);
 
-  if (kappa <= 0) {
+  if (kappa < -1e-6) {
     eigenReadout.textContent = 'Eigenrichtungen: keine reellen';
+    return;
+  }
+
+  if (Math.abs(kappa) <= 1e-6) {
+    const start = new THREE.Vector3(0, -CONFIG.bMax, 0);
+    const end = new THREE.Vector3(0, CONFIG.bMax, 0);
+    eigenGroup.add(makeRod(start, end, COLORS.eigen, 0.055));
+
+    for (const point of [start, end]) {
+      const marker = new THREE.Mesh(
+        new THREE.SphereGeometry(0.09, 18, 12),
+        new THREE.MeshStandardMaterial({
+          color: COLORS.eigen,
+          roughness: 0.35,
+          depthTest: false,
+        }),
+      );
+      marker.position.copy(point);
+      marker.renderOrder = 31;
+      eigenGroup.add(marker);
+    }
+
+    eigenReadout.textContent = 'Eigenrichtung: λ = 0,  a = 0 (b-Achse)';
     return;
   }
 

@@ -57,31 +57,39 @@ function makeLine(points, color, opacity = 1) {
   return new THREE.Line(geometry, material);
 }
 
+function admissibleBLimit(kappa) {
+  if (kappa >= 0) return CONFIG.bMax;
+  return Math.min(CONFIG.bMax, 1 / Math.sqrt(-kappa));
+}
+
 function makeSurfaceBranch(sign) {
   const positions = [];
   const indices = [];
   const rowSize = CONFIG.bSteps + 1;
 
+  // Parameterize each kappa-slice by a symmetric normalized coordinate u ∈ [-1, 1].
+  // For kappa < 0 the admissible real interval ends exactly at
+  // |b| = 1 / sqrt(-kappa). This avoids NaN clipping and makes both frontiers
+  // exact mirror images under b -> -b.
   for (let i = 0; i <= CONFIG.kappaSteps; i += 1) {
     const kappa = THREE.MathUtils.lerp(CONFIG.kappaMin, CONFIG.kappaMax, i / CONFIG.kappaSteps);
+    const bLimit = admissibleBLimit(kappa);
     for (let j = 0; j <= CONFIG.bSteps; j += 1) {
-      const b = THREE.MathUtils.lerp(CONFIG.bMin, CONFIG.bMax, j / CONFIG.bSteps);
-      const radicand = 1 + kappa * b * b;
-      const a = radicand >= 0 ? sign * Math.sqrt(radicand) : Number.NaN;
+      const u = THREE.MathUtils.lerp(-1, 1, j / CONFIG.bSteps);
+      const b = u * bLimit;
+      const radicand = Math.max(0, 1 + kappa * b * b);
+      const a = sign * Math.sqrt(radicand);
       positions.push(a, b, kappa);
     }
   }
 
-  const valid = (idx) => Number.isFinite(positions[idx * 3]);
   for (let i = 0; i < CONFIG.kappaSteps; i += 1) {
     for (let j = 0; j < CONFIG.bSteps; j += 1) {
       const p00 = i * rowSize + j;
       const p01 = p00 + 1;
       const p10 = (i + 1) * rowSize + j;
       const p11 = p10 + 1;
-
-      if (valid(p00) && valid(p10) && valid(p11)) indices.push(p00, p10, p11);
-      if (valid(p00) && valid(p11) && valid(p01)) indices.push(p00, p11, p01);
+      indices.push(p00, p10, p11, p00, p11, p01);
     }
   }
 

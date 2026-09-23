@@ -98,7 +98,7 @@ Hence the sign of `κ` separates three regimes:
 | κ | regime | real eigen-directions |
 |---|---|---|
 | `< 0` | elliptic | none |
-| `= 0` | parabolic / nilpotent | critical direction |
+| `= 0` | parabolic / nilpotent | exactly one: `a = 0` (the `b`-axis) |
 | `> 0` | hyperbolic | two |
 
 For `κ < 0`, the real domain ends symmetrically at\n\n\\[\n|b| = \\frac{1}{\\sqrt{-\\kappa}},\n\\]\n\nso the two admissibility frontiers are exact mirror images under `b -> -b`. The renderer parameterizes this boundary directly rather than clipping invalid mesh vertices.\n\nFor `κ > 0`, the eigen-directions have slopes

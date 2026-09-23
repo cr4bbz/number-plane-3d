@@ -57,6 +57,27 @@ function makeLine(points, color, opacity = 1) {
   return new THREE.Line(geometry, material);
 }
 
+function makeRod(start, end, color, radius = 0.035) {
+  const direction = new THREE.Vector3().subVectors(end, start);
+  const length = direction.length();
+  const geometry = new THREE.CylinderGeometry(radius, radius, length, 16);
+  const material = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.45,
+    metalness: 0.0,
+    depthTest: false,
+  });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.copy(start).add(end).multiplyScalar(0.5);
+  mesh.quaternion.setFromUnitVectors(
+    new THREE.Vector3(0, 1, 0),
+    direction.clone().normalize(),
+  );
+  mesh.renderOrder = 30;
+  return mesh;
+}
+
 function admissibleBLimit(kappa) {
   if (kappa >= 0) return CONFIG.bMax;
   return Math.min(CONFIG.bMax, 1 / Math.sqrt(-kappa));
@@ -174,6 +195,7 @@ const phaseEl = document.querySelector('#phase');
 const pointReadout = document.querySelector('#pointReadout');
 const projectionReadout = document.querySelector('#projectionReadout');
 const invariantReadout = document.querySelector('#invariantReadout');
+const eigenReadout = document.querySelector('#eigenReadout');
 const playButton = document.querySelector('#playKappa');
 
 let branchSign = 1;
@@ -197,23 +219,53 @@ function replaceCurrentSlice(kappa) {
   root.add(currentSlice);
 }
 
-function rebuildEigenDirections(kappa) {
-  while (eigenGroup.children.length) {
-    const child = eigenGroup.children.pop();
+function clearGroup(group) {
+  while (group.children.length) {
+    const child = group.children[0];
+    group.remove(child);
     child.geometry?.dispose();
     child.material?.dispose();
   }
-  if (kappa <= 0) return;
+}
 
-  const slope = 1 / Math.sqrt(kappa);
-  const aExtent = Math.min(3.2, 3 / slope);
-  for (const s of [-1, 1]) {
-    const points = [
-      new THREE.Vector3(-aExtent, s * slope * -aExtent, kappa),
-      new THREE.Vector3(aExtent, s * slope * aExtent, kappa),
-    ];
-    eigenGroup.add(makeLine(points, COLORS.eigen, 0.9));
+function rebuildEigenDirections(kappa) {
+  clearGroup(eigenGroup);
+
+  if (kappa <= 0) {
+    eigenReadout.textContent = 'Eigenrichtungen: keine reellen';
+    return;
   }
+
+  const lambda = Math.sqrt(kappa);
+  const slope = 1 / lambda;
+  const aExtent = Math.min(3.2, CONFIG.bMax / slope);
+
+  for (const s of [-1, 1]) {
+    const start = new THREE.Vector3(-aExtent, -s * slope * aExtent, kappa);
+    const end = new THREE.Vector3(aExtent, s * slope * aExtent, kappa);
+
+    const rod = makeRod(start, end, COLORS.eigen, 0.045);
+    eigenGroup.add(rod);
+
+    const endpointMaterial = new THREE.MeshStandardMaterial({
+      color: COLORS.eigen,
+      roughness: 0.35,
+      depthTest: false,
+    });
+
+    for (const point of [start, end]) {
+      const marker = new THREE.Mesh(
+        new THREE.SphereGeometry(0.085, 18, 12),
+        endpointMaterial.clone(),
+      );
+      marker.position.copy(point);
+      marker.renderOrder = 31;
+      eigenGroup.add(marker);
+    }
+  }
+
+  eigenReadout.textContent =
+    `Eigenrichtungen: λ± = ±${lambda.toFixed(3)},  b = ±${slope.toFixed(3)}a`;
 }
 
 function updateProbe() {

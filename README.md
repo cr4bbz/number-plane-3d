@@ -22,7 +22,7 @@ The project is intentionally small: **Three.js + Vite, no UI framework**.
 - a probe point `z = a + b ε` constrained to the surface
 - the projection `π(a,b,κ) = a` onto the real axis
 - the real eigen-directions that appear for `κ > 0`
-- an animation that moves continuously through the elliptic → parabolic → hyperbolic regimes
+- an animation that moves continuously through the elliptic → parabolic → hyperbolic regimes\n- analytically symmetric admissibility frontiers for κ < 0
 
 The coordinate convention is:
 
@@ -101,7 +101,7 @@ Hence the sign of `κ` separates three regimes:
 | `= 0` | parabolic / nilpotent | critical direction |
 | `> 0` | hyperbolic | two |
 
-For `κ > 0`, the eigen-directions have slopes
+For `κ < 0`, the real domain ends symmetrically at\n\n\\[\n|b| = \\frac{1}{\\sqrt{-\\kappa}},\n\\]\n\nso the two admissibility frontiers are exact mirror images under `b -> -b`. The renderer parameterizes this boundary directly rather than clipping invalid mesh vertices.\n\nFor `κ > 0`, the eigen-directions have slopes
 
 \[
 b=\pm\frac{1}{\sqrt{\kappa}}a.

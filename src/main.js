@@ -3,21 +3,19 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import './style.css';
 
 const CONFIG = {
-  kappaMin: -2,
-  kappaMax: 2,
+  kappaLimit: 2,
   bMin: -3,
   bMax: 3,
-  kappaSteps: 118,
+  kappaSteps: 180,
   bSteps: 150,
   surfaceOpacity: 0.30,
 };
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf4f2ed);
-scene.fog = new THREE.Fog(0xf4f2ed, 12, 26);
+scene.fog = new THREE.Fog(0xf4f2ed, 12, 40);
 
-const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(7.8, 5.7, 8.5);
+const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 1000);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -29,8 +27,6 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.055;
 controls.target.set(0, 0, 0);
-controls.minDistance = 4.5;
-controls.maxDistance = 24;
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x777777, 2.2));
 const keyLight = new THREE.DirectionalLight(0xffffff, 2.4);
@@ -57,6 +53,24 @@ function makeLine(points, color, opacity = 1) {
   return new THREE.Line(geometry, material);
 }
 
+function clearGroup(group) {
+  while (group.children.length) {
+    const child = group.children[0];
+    group.remove(child);
+    child.traverse?.((obj) => {
+      obj.geometry?.dispose();
+      if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+      else obj.material?.dispose();
+    });
+  }
+}
+
+function kappaAt(index) {
+  const t = THREE.MathUtils.lerp(-1, 1, index / CONFIG.kappaSteps);
+  const signedDense = Math.sign(t) * Math.pow(Math.abs(t), 2.15);
+  return CONFIG.kappaLimit * signedDense;
+}
+
 function admissibleBLimit(kappa) {
   if (kappa >= 0) return CONFIG.bMax;
   return Math.min(CONFIG.bMax, 1 / Math.sqrt(-kappa));
@@ -67,13 +81,10 @@ function makeSurfaceBranch(sign) {
   const indices = [];
   const rowSize = CONFIG.bSteps + 1;
 
-  // Parameterize each kappa-slice by a symmetric normalized coordinate u ∈ [-1, 1].
-  // For kappa < 0 the admissible real interval ends exactly at
-  // |b| = 1 / sqrt(-kappa). This avoids NaN clipping and makes both frontiers
-  // exact mirror images under b -> -b.
   for (let i = 0; i <= CONFIG.kappaSteps; i += 1) {
-    const kappa = THREE.MathUtils.lerp(CONFIG.kappaMin, CONFIG.kappaMax, i / CONFIG.kappaSteps);
+    const kappa = kappaAt(i);
     const bLimit = admissibleBLimit(kappa);
+
     for (let j = 0; j <= CONFIG.bSteps; j += 1) {
       const u = THREE.MathUtils.lerp(-1, 1, j / CONFIG.bSteps);
       const b = u * bLimit;
@@ -107,28 +118,36 @@ function makeSurfaceBranch(sign) {
     side: THREE.DoubleSide,
     depthWrite: false,
   });
+
   return new THREE.Mesh(geometry, material);
 }
 
 const surfaceGroup = new THREE.Group();
-surfaceGroup.add(makeSurfaceBranch(1), makeSurfaceBranch(-1));
 root.add(surfaceGroup);
+
+function rebuildSurface() {
+  clearGroup(surfaceGroup);
+  surfaceGroup.add(makeSurfaceBranch(1), makeSurfaceBranch(-1));
+}
 
 function sliceCurves(kappa, color = COLORS.slice, samples = 360) {
   const branches = [[], []];
+
   for (let j = 0; j <= samples; j += 1) {
     const b = THREE.MathUtils.lerp(CONFIG.bMin, CONFIG.bMax, j / samples);
     const radicand = 1 + kappa * b * b;
     if (radicand < 0) continue;
+
     const a = Math.sqrt(radicand);
     branches[0].push(new THREE.Vector3(a, b, kappa));
     branches[1].push(new THREE.Vector3(-a, b, kappa));
   }
-  const g = new THREE.Group();
+
+  const group = new THREE.Group();
   for (const branch of branches) {
-    if (branch.length > 1) g.add(makeLine(branch, color, 0.95));
+    if (branch.length > 1) group.add(makeLine(branch, color, 0.95));
   }
-  return g;
+  return group;
 }
 
 const referenceSlices = new THREE.Group();
@@ -141,23 +160,72 @@ let currentSlice = sliceCurves(0);
 root.add(currentSlice);
 
 const axes = new THREE.Group();
-axes.add(makeLine([new THREE.Vector3(-4.2, 0, 0), new THREE.Vector3(4.2, 0, 0)], COLORS.ink, 0.62));
-axes.add(makeLine([new THREE.Vector3(0, -3.7, 0), new THREE.Vector3(0, 3.7, 0)], COLORS.ink, 0.40));
-axes.add(makeLine([new THREE.Vector3(0, 0, -2.5), new THREE.Vector3(0, 0, 2.5)], COLORS.ink, 0.40));
 root.add(axes);
 
-const grid = new THREE.GridHelper(8, 16, 0x777777, 0xbbbbbb);
-grid.rotation.x = Math.PI / 2;
-grid.position.z = -2.02;
-grid.material.transparent = true;
-grid.material.opacity = 0.22;
-root.add(grid);
+let grid = null;
+
+function sceneScale() {
+  const aExtent = Math.sqrt(1 + CONFIG.kappaLimit * CONFIG.bMax * CONFIG.bMax);
+  return Math.max(6, CONFIG.kappaLimit, aExtent);
+}
+
+function rebuildAxesAndGrid() {
+  clearGroup(axes);
+
+  const aExtent = Math.sqrt(1 + CONFIG.kappaLimit * CONFIG.bMax * CONFIG.bMax);
+  const xExtent = Math.max(4.2, aExtent * 1.08);
+  const zExtent = CONFIG.kappaLimit * 1.05;
+
+  axes.add(makeLine(
+    [new THREE.Vector3(-xExtent, 0, 0), new THREE.Vector3(xExtent, 0, 0)],
+    COLORS.ink,
+    0.62,
+  ));
+  axes.add(makeLine(
+    [new THREE.Vector3(0, -3.7, 0), new THREE.Vector3(0, 3.7, 0)],
+    COLORS.ink,
+    0.40,
+  ));
+  axes.add(makeLine(
+    [new THREE.Vector3(0, 0, -zExtent), new THREE.Vector3(0, 0, zExtent)],
+    COLORS.ink,
+    0.40,
+  ));
+
+  if (grid) {
+    root.remove(grid);
+    grid.geometry?.dispose();
+    grid.material?.dispose();
+  }
+
+  const size = Math.max(8, xExtent * 2.1);
+  grid = new THREE.GridHelper(size, 20, 0x777777, 0xbbbbbb);
+  grid.rotation.x = Math.PI / 2;
+  grid.position.z = -CONFIG.kappaLimit * 1.01;
+  grid.material.transparent = true;
+  grid.material.opacity = 0.22;
+  root.add(grid);
+}
+
+function fitCamera() {
+  const scale = sceneScale();
+  camera.position.set(scale * 1.30, scale * 0.95, scale * 1.40);
+  controls.target.set(0, 0, 0);
+  controls.minDistance = Math.max(2.5, scale * 0.12);
+  controls.maxDistance = scale * 7;
+  scene.fog.near = scale * 1.7;
+  scene.fog.far = scale * 5.2;
+  controls.update();
+}
 
 const probeMaterial = new THREE.MeshStandardMaterial({ color: COLORS.projection, roughness: 0.48 });
 const probe = new THREE.Mesh(new THREE.SphereGeometry(0.075, 24, 16), probeMaterial);
 root.add(probe);
 
-const projected = new THREE.Mesh(new THREE.SphereGeometry(0.06, 20, 14), new THREE.MeshStandardMaterial({ color: COLORS.ink }));
+const projected = new THREE.Mesh(
+  new THREE.SphereGeometry(0.06, 20, 14),
+  new THREE.MeshStandardMaterial({ color: COLORS.ink }),
+);
 root.add(projected);
 
 let projectionLine = makeLine([new THREE.Vector3(), new THREE.Vector3()], COLORS.projection, 0.7);
@@ -166,10 +234,13 @@ root.add(projectionLine);
 const eigenGroup = new THREE.Group();
 root.add(eigenGroup);
 
+const kappaRange = document.querySelector('#kappaRange');
 const kappaInput = document.querySelector('#kappa');
 const bInput = document.querySelector('#bProbe');
 const kappaValue = document.querySelector('#kappaValue');
 const bValue = document.querySelector('#bValue');
+const kappaTickMin = document.querySelector('#kappaTickMin');
+const kappaTickMax = document.querySelector('#kappaTickMax');
 const phaseEl = document.querySelector('#phase');
 const pointReadout = document.querySelector('#pointReadout');
 const projectionReadout = document.querySelector('#projectionReadout');
@@ -192,28 +263,35 @@ function replaceCurrentSlice(kappa) {
     obj.geometry?.dispose();
     obj.material?.dispose();
   });
+
   currentSlice = sliceCurves(kappa);
   currentSlice.visible = document.querySelector('#sliceToggle').checked;
   root.add(currentSlice);
 }
 
 function rebuildEigenDirections(kappa) {
-  while (eigenGroup.children.length) {
-    const child = eigenGroup.children.pop();
-    child.geometry?.dispose();
-    child.material?.dispose();
-  }
+  clearGroup(eigenGroup);
   if (kappa <= 0) return;
 
   const slope = 1 / Math.sqrt(kappa);
-  const aExtent = Math.min(3.2, 3 / slope);
-  for (const s of [-1, 1]) {
+  const aExtent = Math.min(
+    Math.sqrt(1 + CONFIG.kappaLimit * CONFIG.bMax * CONFIG.bMax),
+    CONFIG.bMax / slope,
+  );
+
+  for (const sign of [-1, 1]) {
     const points = [
-      new THREE.Vector3(-aExtent, s * slope * -aExtent, kappa),
-      new THREE.Vector3(aExtent, s * slope * aExtent, kappa),
+      new THREE.Vector3(-aExtent, sign * slope * -aExtent, kappa),
+      new THREE.Vector3(aExtent, sign * slope * aExtent, kappa),
     ];
     eigenGroup.add(makeLine(points, COLORS.eigen, 0.9));
   }
+}
+
+function updateProbeScale() {
+  const markerScale = Math.max(1, sceneScale() / 8);
+  probe.scale.setScalar(markerScale);
+  projected.scale.setScalar(markerScale);
 }
 
 function updateProbe() {
@@ -258,13 +336,40 @@ function updateKappa() {
   updateProbe();
 }
 
+function updateKappaRange() {
+  CONFIG.kappaLimit = Number(kappaRange.value);
+
+  kappaInput.min = String(-CONFIG.kappaLimit);
+  kappaInput.max = String(CONFIG.kappaLimit);
+  kappaInput.step = CONFIG.kappaLimit <= 10 ? '0.01' : '0.05';
+
+  const current = THREE.MathUtils.clamp(
+    Number(kappaInput.value),
+    -CONFIG.kappaLimit,
+    CONFIG.kappaLimit,
+  );
+  kappaInput.value = String(current);
+
+  kappaTickMin.textContent = `−${CONFIG.kappaLimit}`;
+  kappaTickMax.textContent = `+${CONFIG.kappaLimit}`;
+
+  rebuildSurface();
+  rebuildAxesAndGrid();
+  updateProbeScale();
+  updateKappa();
+  fitCamera();
+}
+
+kappaRange.addEventListener('change', updateKappaRange);
 kappaInput.addEventListener('input', updateKappa);
 bInput.addEventListener('input', updateProbe);
 
 document.querySelectorAll('.branch').forEach((button) => {
   button.addEventListener('click', () => {
     branchSign = Number(button.dataset.branch);
-    document.querySelectorAll('.branch').forEach((b) => b.classList.toggle('is-active', b === button));
+    document.querySelectorAll('.branch').forEach((item) => {
+      item.classList.toggle('is-active', item === button);
+    });
     updateProbe();
   });
 });
@@ -289,28 +394,29 @@ playButton.addEventListener('click', () => {
   playButton.textContent = playing ? 'Animation stoppen' : 'κ animieren';
 });
 
-document.querySelector('#resetCamera').addEventListener('click', () => {
-  camera.position.set(7.8, 5.7, 8.5);
-  controls.target.set(0, 0, 0);
-  controls.update();
-});
+document.querySelector('#resetCamera').addEventListener('click', fitCamera);
 
 let previousTime = performance.now();
+
 function animate(now) {
   requestAnimationFrame(animate);
+
   const dt = Math.min((now - previousTime) / 1000, 0.05);
   previousTime = now;
 
   if (playing) {
-    let kappa = Number(kappaInput.value) + playDirection * dt * 0.65;
-    if (kappa >= CONFIG.kappaMax) {
-      kappa = CONFIG.kappaMax;
+    const speed = CONFIG.kappaLimit * 0.32;
+    let kappa = Number(kappaInput.value) + playDirection * dt * speed;
+
+    if (kappa >= CONFIG.kappaLimit) {
+      kappa = CONFIG.kappaLimit;
       playDirection = -1;
-    } else if (kappa <= CONFIG.kappaMin) {
-      kappa = CONFIG.kappaMin;
+    } else if (kappa <= -CONFIG.kappaLimit) {
+      kappa = -CONFIG.kappaLimit;
       playDirection = 1;
     }
-    kappaInput.value = kappa.toFixed(2);
+
+    kappaInput.value = kappa.toFixed(CONFIG.kappaLimit <= 10 ? 2 : 1);
     updateKappa();
   }
 
@@ -324,5 +430,9 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+rebuildSurface();
+rebuildAxesAndGrid();
+updateProbeScale();
 updateKappa();
+fitCamera();
 requestAnimationFrame(animate);

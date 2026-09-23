@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Interaktive 3D-Visualisierung der parametrisierten Zahlenebene A_kappa." />
+    <title>Number Plane 3D</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="hud hud--title">
+        <p class="eyebrow">NUMBER PLANE 3D · GATE 1</p>
+        <h1>Projektionsfläche <span>Σ</span></h1>
+        <p class="formula">a² − κb² = 1</p>
+      </header>
+
+      <aside class="hud hud--controls" aria-label="Visualisierungssteuerung">
+        <section>
+          <div class="row row--heading">
+            <h2>Schnitt</h2>
+            <output id="kappaValue">κ = 0.00</output>
+          </div>
+          <input id="kappa" type="range" min="-2" max="2" step="0.01" value="0" />
+          <div class="ticks"><span>−2</span><span>0</span><span>+2</span></div>
+        </section>
+
+        <section>
+          <div class="row row--heading">
+            <h2>Probenpunkt</h2>
+            <output id="bValue">b = 0.80</output>
+          </div>
+          <input id="bProbe" type="range" min="-3" max="3" step="0.01" value="0.8" />
+          <div class="segmented" role="group" aria-label="Ast der Normfläche">
+            <button class="branch is-active" data-branch="1">+a</button>
+            <button class="branch" data-branch="-1">−a</button>
+          </div>
+        </section>
+
+        <section class="toggles">
+          <label><input id="surfaceToggle" type="checkbox" checked /> Normfläche Σ</label>
+          <label><input id="sliceToggle" type="checkbox" checked /> κ-Schnitt</label>
+          <label><input id="projectionToggle" type="checkbox" checked /> Projektion π</label>
+          <label><input id="eigenToggle" type="checkbox" checked /> Eigenrichtungen</label>
+        </section>
+
+        <section class="actions">
+          <button id="playKappa">κ animieren</button>
+          <button id="resetCamera">Kamera zurücksetzen</button>
+        </section>
+      </aside>
+
+      <aside class="hud hud--info">
+        <p><strong id="phase">parabolisch</strong></p>
+        <p id="pointReadout">z = a + bε</p>
+        <p id="projectionReadout">π(z) = a</p>
+        <p id="invariantReadout">ε² = κ</p>
+      </aside>
+
+      <div id="scene" aria-label="Interaktive 3D-Darstellung"></div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

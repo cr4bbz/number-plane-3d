@@ -54,7 +54,8 @@ npm run preview
 
 - **mouse drag:** rotate camera
 - **mouse wheel:** zoom
-- **κ slider:** move the active horizontal slice
+- **κ range:** switch the explored domain between ±2, ±10, ±50 and ±100
+- **κ slider:** move the active horizontal slice inside the selected domain
 - **b slider:** move the probe point along the active slice
 - **+a / −a:** switch between the two sheets of `Σ`
 - **κ animieren:** sweep automatically through the three regimes
@@ -121,3 +122,12 @@ Add reproducible screenshots / video export and a small data layer that can be c
 ## License
 
 MIT unless changed later.
+
+
+## Extended κ domains
+
+The surface can be rebuilt interactively for `|κ| ≤ 2, 10, 50, 100`.
+For wide ranges, the κ mesh uses a nonlinear sampling density concentrated around `κ = 0`.
+This keeps the elliptic/parabolic/hyperbolic transition legible while still exposing the large-|κ| geometry.
+
+The camera, κ-axis, lower reference grid and probe-marker scale are refitted whenever the κ-domain changes.

@@ -14,3 +14,7 @@ jobs:
       - run: npm install
       - run: npm test
       - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: number-plane-3d-dist
+          path: dist

@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {coneCoupling,coneIntersectionPoint,conicName,normPoint,normValue,normalizedKappa,nullSliceKind,phaseName} from '../src/math.js';
+assert.equal(phaseName(-2),'elliptisch');
+assert.equal(phaseName(0),'parabolisch');
+assert.equal(phaseName(2),'hyperbolisch');
+assert.equal(conicName(-1),'Kreis');
+assert.equal(conicName(-0.5),'Ellipse');
+assert.equal(conicName(0),'Parabel');
+assert.equal(conicName(0.5),'Hyperbel');
+assert.equal(coneCoupling(-2,'exact').available,false);
+assert.equal(coneCoupling(-1,'exact').m,0);
+assert.ok(Math.abs(coneCoupling(0,'exact').alpha-Math.PI/4)<1e-10);
+assert.ok(Math.abs(coneCoupling(3,'exact').m-2)<1e-10);
+assert.ok(normalizedKappa(-100)>-1&&normalizedKappa(-100)<0);
+assert.ok(normalizedKappa(100)<1&&normalizedKappa(100)>0);
+for(const kappa of [-2,-0.3,0,2,25]){const p=normPoint(kappa,0,1);assert.ok(p);assert.ok(Math.abs(p.a-1)<1e-12);assert.ok(Math.abs(normValue(p.a,p.b,kappa)-1)<1e-12);}
+assert.deepEqual(coneIntersectionPoint(0,1,coneCoupling(0,'exact'),1),{x:1,y:0,z:1});
+assert.equal(nullSliceKind(-1),'origin');
+assert.equal(nullSliceKind(0),'one-line');
+assert.equal(nullSliceKind(1),'two-lines');
+console.log('NP3D_MATH_OK');

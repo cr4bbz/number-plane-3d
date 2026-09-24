@@ -1,49 +1,64 @@
 # number-plane-3d
 
-Interactive browser visualization of the parametrized real algebra
+Interactive research viewer for the parametrized real algebra
 
 \[
-A_\kappa = \mathbb{R}[\varepsilon]/(\varepsilon^2-\kappa)
+A_\kappa=\mathbb{R}[\varepsilon]/(\varepsilon^2-\kappa)
 \]
 
-and the norm surface
+and its norm family
 
 \[
-\Sigma = \{(a,b,\kappa)\in\mathbb{R}^3 \mid a^2-\kappa b^2=1\}.
+\Sigma=\{(a,b,\kappa)\in\mathbb{R}^3\mid a^2-\kappa b^2=1\}.
 \]
 
-The project is intentionally small: **Three.js + Vite, no UI framework**.
+## Gate 2A · Synced Compare Mode
 
-## What Gate 1 visualizes
+The screen is split into two independently rotatable 3D views: the number-plane family on the left and a double-cone cut on the right.
 
-- the full 3D norm surface `Σ`
-- horizontal `κ = const.` slices
-- reference slices at `κ = -1, 0, +1`
-- a probe point `z = a + b ε` constrained to the surface
-- the projection `π(a,b,κ) = a` onto the real axis
-- the real eigen-directions that appear for `κ > 0`
-- an animation that moves continuously through the elliptic → parabolic → hyperbolic regimes\n- analytically symmetric admissibility frontiers for κ < 0
+The exact coupling is
 
-The coordinate convention is:
+\[
+\kappa=m^2-1=\tan^2\alpha-1.
+\]
 
-- `x = a`
-- `y = b`
-- `z = κ`
+Thus negative/zero/positive κ matches ellipse/parabola/hyperbola, with κ=-1 giving the circular cut.
+
+The exact standard-cone identification is real only for κ≥-1. For κ<-1 the viewer says so explicitly. A second normalized mode uses
+
+\[
+\widehat\kappa=\frac{\kappa}{1+|\kappa|}
+\]
+
+to preserve the sign/type across all real source κ without pretending that magnitudes are identical.
+
+## Gate 2B · Research Mode
+
+The optional null-set layer visualizes
+
+\[
+N_\kappa(a+b\varepsilon)=a^2-\kappa b^2=0.
+\]
+
+This exposes the transition from only the trivial zero (κ<0), through one critical null direction (κ=0), to two real null directions (κ>0). For κ>0 those null directions coincide with the real eigendirections of multiplication by ε.
+
+The shared research strip reports phase, norm value, null structure, plane slope m, plane angle α, eccentricity e, and the active exact/normalized mapping.
 
 ## Local start
 
-Requirements: a current Node.js installation with npm.
+Requires Node.js 22+ and npm.
 
 ```powershell
 git clone https://github.com/cr4bbz/number-plane-3d.git
 cd number-plane-3d
 npm install
+npm test
 npm run dev
 ```
 
-Vite prints the local URL, usually `http://localhost:5173/`.
+Vite binds to all local interfaces and usually prints both localhost and LAN addresses.
 
-## Production build
+Production:
 
 ```powershell
 npm run build
@@ -52,82 +67,18 @@ npm run preview
 
 ## Controls
 
-- **mouse drag:** rotate camera
-- **mouse wheel:** zoom
-- **κ range:** switch the explored domain between ±2, ±10, ±50 and ±100
-- **κ slider:** move the active horizontal slice inside the selected domain
-- **b slider:** move the probe point along the active slice
-- **+a / −a:** switch between the two sheets of `Σ`
-- **κ animieren:** sweep automatically through the three regimes
-- layer switches: surface, slice, projection and eigen-directions
+- rotate and zoom each 3D view independently
+- source κ ranges ±2, ±10, ±50, ±100
+- shared κ and b controls
+- exact / normalized cone coupling
+- optional norm surface, slice, projection, eigendirections and null set
+- optional cone, cutting plane, conic intersection and coupled probe
+- κ animation across the phase transition
 
-## Mathematics
+## Automated checks
 
-The multiplication rule is
-
-\[
-(a+b\varepsilon)(c+d\varepsilon)
-=(ac+\kappa bd)+(ad+bc)\varepsilon.
-\]
-
-Conjugation and norm are
-
-\[
-\overline{a+b\varepsilon}=a-b\varepsilon,
-\qquad
-N_\kappa(a+b\varepsilon)=a^2-\kappa b^2.
-\]
-
-The transition operator
-
-\[
-L_\varepsilon=
-\begin{pmatrix}
-0 & \kappa\\
-1 & 0
-\end{pmatrix}
-\]
-
-satisfies
-
-\[
-L_\varepsilon^2=\kappa I.
-\]
-
-Hence the sign of `κ` separates three regimes:
-
-| κ | regime | real eigen-directions |
-|---|---|---|
-| `< 0` | elliptic | none |
-| `= 0` | parabolic / nilpotent | critical direction |
-| `> 0` | hyperbolic | two |
-
-For `κ < 0`, the real domain ends symmetrically at\n\n\\[\n|b| = \\frac{1}{\\sqrt{-\\kappa}},\n\\]\n\nso the two admissibility frontiers are exact mirror images under `b -> -b`. The renderer parameterizes this boundary directly rather than clipping invalid mesh vertices.\n\nFor `κ > 0`, the eigen-directions have slopes
-
-\[
-b=\pm\frac{1}{\sqrt{\kappa}}a.
-\]
-
-## Planned gates
-
-### Gate 2 · Projective flow
-Visualize the flow `Φ_t(z)=e^{tε}z` and its projectivization directly on the 3D family.
-
-### Gate 3 · Idempotent sheets
-Visualize `e_±=(1±ε/√κ)/2`, their projectors and the birth of the two hyperbolic directions at `κ=0`.
-
-### Gate 4 · Research export
-Add reproducible screenshots / video export and a small data layer that can be compared against Lean-verified statements.
+`npm test` checks the pure algebra/cone mapping. GitHub Actions runs tests and a Vite production build on pushes and pull requests.
 
 ## License
 
-MIT unless changed later.
-
-
-## Extended κ domains
-
-The surface can be rebuilt interactively for `|κ| ≤ 2, 10, 50, 100`.
-For wide ranges, the κ mesh uses a nonlinear sampling density concentrated around `κ = 0`.
-This keeps the elliptic/parabolic/hyperbolic transition legible while still exposing the large-|κ| geometry.
-
-The camera, κ-axis, lower reference grid and probe-marker scale are refitted whenever the κ-domain changes.
+MIT.

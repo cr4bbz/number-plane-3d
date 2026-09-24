@@ -3,72 +3,38 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Interaktive 3D-Visualisierung der parametrisierten Zahlenebene A_kappa." />
-    <title>Number Plane 3D</title>
+    <meta name="description" content="Synchronisiertes 3D-Vergleichslabor für Zahlenebene und Kegelschnitte." />
+    <title>Number Plane 3D · Compare Lab</title>
   </head>
   <body>
     <div id="app">
-      <header class="hud hud--title">
-        <p class="eyebrow">NUMBER PLANE 3D · GATE 1</p>
-        <h1>Projektionsfläche <span>Σ</span></h1>
-        <p class="formula">a² − κb² = 1</p>
-      </header>
-
-      <aside class="hud hud--controls" aria-label="Visualisierungssteuerung">
-        <section>
-          <div class="row row--heading">
-            <h2>κ-Bereich</h2>
-            <select id="kappaRange" aria-label="Maximaler Betrag von Kappa">
-              <option value="2" selected>−2 … +2</option>
-              <option value="10">−10 … +10</option>
-              <option value="50">−50 … +50</option>
-              <option value="100">−100 … +100</option>
-            </select>
-          </div>
+      <main id="workspace">
+        <section class="viewport">
+          <div class="panel-caption"><span>ZAHLENEBENE</span><strong>Σ: a² − κb² = 1</strong></div>
+          <div id="numberScene" class="scene-host" aria-label="3D-Zahlenebene"></div>
         </section>
-
-        <section>
-          <div class="row row--heading">
-            <h2>Schnitt</h2>
-            <output id="kappaValue">κ = 0.00</output>
-          </div>
-          <input id="kappa" type="range" min="-2" max="2" step="0.01" value="0" />
-          <div class="ticks"><span id="kappaTickMin">−2</span><span>0</span><span id="kappaTickMax">+2</span></div>
+        <section class="viewport viewport--cone">
+          <div class="panel-caption"><span>KEGELSCHNITT</span><strong>x² + y² = z² · z = my + h</strong></div>
+          <div id="coneUnavailable" class="scene-notice" hidden>Exakte Standardkegel-Kopplung existiert hier nicht reell.<br />Nutze „normiert“, um die Signatur weiterzuverfolgen.</div>
+          <div id="coneScene" class="scene-host" aria-label="3D-Kegelschnitt"></div>
         </section>
-
-        <section>
-          <div class="row row--heading">
-            <h2>Probenpunkt</h2>
-            <output id="bValue">b = 0.80</output>
-          </div>
-          <input id="bProbe" type="range" min="-3" max="3" step="0.01" value="0.8" />
-          <div class="segmented" role="group" aria-label="Ast der Normfläche">
-            <button class="branch is-active" data-branch="1">+a</button>
-            <button class="branch" data-branch="-1">−a</button>
-          </div>
-        </section>
-
-        <section class="toggles">
-          <label><input id="surfaceToggle" type="checkbox" checked /> Normfläche Σ</label>
-          <label><input id="sliceToggle" type="checkbox" checked /> κ-Schnitt</label>
-          <label><input id="projectionToggle" type="checkbox" checked /> Projektion π</label>
-          <label><input id="eigenToggle" type="checkbox" checked /> Eigenrichtungen</label>
-        </section>
-
-        <section class="actions">
-          <button id="playKappa">κ animieren</button>
-          <button id="resetCamera">Kamera zurücksetzen</button>
-        </section>
+      </main>
+      <aside id="controlRail">
+        <header><p class="eyebrow">NUMBER PLANE 3D · GATE 2A/B</p><h1>Synced Compare Lab</h1><p class="lede">Ein κ, zwei Repräsentationen.</p></header>
+        <section><div class="row"><h2>κ-Bereich</h2><select id="kappaRange"><option value="2" selected>−2 … +2</option><option value="10">−10 … +10</option><option value="50">−50 … +50</option><option value="100">−100 … +100</option></select></div></section>
+        <section><div class="row"><h2>κ</h2><output id="kappaValue">0.00</output></div><input id="kappa" type="range" min="-2" max="2" step="0.01" value="0" /><div class="ticks"><span id="kappaTickMin">−2</span><span>0</span><span id="kappaTickMax">+2</span></div></section>
+        <section><div class="row"><h2>Probenpunkt b</h2><output id="bValue">0.80</output></div><input id="bProbe" type="range" min="-3" max="3" step="0.01" value="0.8" /><div class="segmented" role="group" aria-label="Ast der Normfläche"><button class="branch is-active" data-branch="1">+ Ast</button><button class="branch" data-branch="-1">− Ast</button></div></section>
+        <section><div class="row"><h2>Kegelkopplung</h2><select id="coneMode"><option value="exact" selected>exakt</option><option value="normalized">normiert</option></select></div><p class="microcopy">Exakt: κ = m² − 1, daher nur κ ≥ −1. Normiert: κ̂ = κ/(1+|κ|), Vorzeichen bleibt erhalten.</p></section>
+        <section class="toggle-block"><h2>Zahlenebene</h2><label><input id="surfaceToggle" type="checkbox" checked /> Normfläche Σ</label><label><input id="sliceToggle" type="checkbox" checked /> κ-Schnitt</label><label><input id="projectionToggle" type="checkbox" checked /> Projektion π</label><label><input id="eigenToggle" type="checkbox" checked /> Eigenrichtungen</label><label><input id="nullToggle" type="checkbox" /> Nullmenge Nκ = 0</label></section>
+        <section class="toggle-block"><h2>Kegel</h2><label><input id="coneToggle" type="checkbox" checked /> Doppelkegel</label><label><input id="planeToggle" type="checkbox" checked /> Schnittebene</label><label><input id="intersectionToggle" type="checkbox" checked /> Schnittkurve</label><label><input id="coneProbeToggle" type="checkbox" checked /> gekoppelter b-Punkt</label></section>
+        <section class="actions"><button id="playKappa">κ animieren</button><button id="resetCameras">Kameras zurücksetzen</button></section>
       </aside>
-
-      <aside class="hud hud--info">
-        <p><strong id="phase">parabolisch</strong></p>
-        <p id="pointReadout">z = a + bε</p>
-        <p id="projectionReadout">π(z) = a</p>
-        <p id="invariantReadout">ε² = κ</p>
-      </aside>
-
-      <div id="scene" aria-label="Interaktive 3D-Darstellung"></div>
+      <section id="researchStrip" aria-label="Forschungswerte">
+        <div><span class="metric-label">PHASE</span><strong id="phase">parabolisch</strong><small id="pointReadout">z = 1 + 0.8ε</small></div>
+        <div><span class="metric-label">NORM / NULLMENGE</span><strong id="normReadout">Nκ(z) = 1</strong><small id="nullReadout">kritischer Übergang</small></div>
+        <div><span class="metric-label">KEGELKOPPLUNG</span><strong id="coneReadout">m = 1 · α = 45°</strong><small id="conicReadout">Parabel · e = 1</small></div>
+        <div><span class="metric-label">ABBILDUNG</span><strong id="mappingReadout">κcone = 0</strong><small id="probeMapReadout">b wird synchron abgetastet</small></div>
+      </section>
     </div>
     <script type="module" src="/src/main.js"></script>
   </body>
